@@ -211,40 +211,68 @@ struct ExploreView: View {
 
 struct PowerStationCard: View {
     let station: PowerStation
+    @State private var showingMap = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Placeholder image
-            Rectangle()
-                .fill(Color.gray.opacity(0.2))
-                .aspectRatio(16/9, contentMode: .fit)
-                .overlay(
-                    Text("Image Placeholder")
-                        .foregroundColor(.gray)
-                )
-                .cornerRadius(8)
-            
-            Text(station.name)
-                .font(.headline)
-            
-            HStack {
-                Image(systemName: "bolt.circle")
-                Text("\(station.capacity) Wh")
-                Spacer()
-                Image(systemName: "location")
-                Text(station.location)
+        Button(action: { showingMap = true }) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Map preview
+                Map(initialPosition: .region(MKCoordinateRegion(
+                    center: station.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                ))) {
+                    Marker(station.name, coordinate: station.coordinate)
+                        .tint(.blue)
+                }
+                .frame(height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .disabled(true)
+                
+                Text(station.name)
+                    .font(.headline)
+                
+                HStack {
+                    Image(systemName: "bolt.circle")
+                    Text("\(station.capacity) Wh")
+                    Spacer()
+                    Image(systemName: "location")
+                    Text(station.location)
+                }
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                
+                Text("$\(String(format: "%.2f", station.pricePerDay))/day")
+                    .font(.title3)
+                    .fontWeight(.bold)
             }
-            .font(.subheadline)
-            .foregroundColor(.gray)
-            
-            Text("$\(String(format: "%.2f", station.pricePerDay))/day")
-                .font(.title3)
-                .fontWeight(.bold)
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(radius: 2)
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 2)
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingMap) {
+            NavigationStack {
+                Map(initialPosition: .region(MKCoordinateRegion(
+                    center: station.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
+                ))) {
+                    Marker(station.name, coordinate: station.coordinate)
+                        .tint(.blue)
+                }
+                .mapControls {
+                    MapUserLocationButton()
+                    MapCompass()
+                }
+                .navigationTitle(station.name)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { showingMap = false }
+                    }
+                }
+            }
+        }
     }
 }
 
