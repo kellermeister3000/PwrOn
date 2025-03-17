@@ -11,10 +11,79 @@ struct PowerStation: Identifiable {
     let coordinate: CLLocationCoordinate2D
 }
 
+struct MapViewRepresentable: UIViewRepresentable {
+    let stations: [PowerStation]
+    @Binding var selectedStation: PowerStation?
+    
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = context.coordinator
+        mapView.showsUserLocation = true
+        mapView.userTrackingMode = .follow
+        return mapView
+    }
+    
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Remove existing annotations
+        let existingAnnotations = mapView.annotations.filter { !($0 is MKUserLocation) }
+        mapView.removeAnnotations(existingAnnotations)
+        
+        // Add station annotations
+        let annotations = stations.map { station -> MKPointAnnotation in
+            let annotation = MKPointAnnotation()
+            annotation.coordinate = station.coordinate
+            annotation.title = station.name
+            annotation.subtitle = "$\(String(format: "%.2f", station.pricePerDay))/day"
+            return annotation
+        }
+        mapView.addAnnotations(annotations)
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, MKMapViewDelegate {
+        var parent: MapViewRepresentable
+        
+        init(_ parent: MapViewRepresentable) {
+            self.parent = parent
+        }
+        
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            guard !(annotation is MKUserLocation) else { return nil }
+            
+            let identifier = "PowerStation"
+            var annotationView = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+            
+            if annotationView == nil {
+                annotationView = MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                annotationView?.canShowCallout = true
+                
+                let button = UIButton(type: .detailDisclosure)
+                annotationView?.rightCalloutAccessoryView = button
+            } else {
+                annotationView?.annotation = annotation
+            }
+            
+            return annotationView
+        }
+        
+        func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+            guard let annotation = view.annotation else { return }
+            if let station = parent.stations.first(where: { $0.coordinate.latitude == annotation.coordinate.latitude && $0.coordinate.longitude == annotation.coordinate.longitude }) {
+                parent.selectedStation = station
+            }
+        }
+    }
+}
+
 struct ExploreView: View {
     @State private var searchText = ""
     @State private var showingAddListing = false
     @State private var showingMapView = false
+    @State private var selectedStation: PowerStation?
+    @State private var position: MapCameraPosition = .userLocation(fallback: .automatic)
     
     // Sample data - will be replaced with Supabase data
     let sampleStations = [
@@ -52,12 +121,18 @@ struct ExploreView: View {
                     searchBar
                     
                     if showingMapView {
-                        // Map placeholder
-                        Color(.systemGray6)
-                            .overlay(
-                                Text("Map View")
-                                    .foregroundColor(.gray)
-                            )
+                        Map(position: $position) {
+                            UserAnnotation()
+                            
+                            ForEach(sampleStations) { station in
+                                Marker(station.name, coordinate: station.coordinate)
+                                    .tint(.blue)
+                            }
+                        }
+                        .mapControls {
+                            MapUserLocationButton()
+                            MapCompass()
+                        }
                     } else {
                         // Power station list
                         ScrollView {
@@ -101,6 +176,20 @@ struct ExploreView: View {
             .sheet(isPresented: $showingAddListing) {
                 Text("Add New Listing")
                     .navigationTitle("New Listing")
+            }
+            .sheet(item: $selectedStation) { station in
+                NavigationStack {
+                    PowerStationCard(station: station)
+                        .padding()
+                        .navigationTitle("Power Station Details")
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Done") {
+                                    selectedStation = nil
+                                }
+                            }
+                        }
+                }
             }
         }
     }
