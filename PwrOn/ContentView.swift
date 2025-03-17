@@ -7,15 +7,35 @@
 
 import SwiftUI
 
+enum NavigationTab {
+    case explore
+    case rentals
+    case profile
+}
+
 struct ContentView: View {
+    @State private var selectedTab: NavigationTab = .explore
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $selectedTab) {
+            ExploreView()
+                .tabItem {
+                    Label("Explore", systemImage: "magnifyingglass")
+                }
+                .tag(NavigationTab.explore)
+            
+            ActiveRentalsView()
+                .tabItem {
+                    Label("Rentals", systemImage: "clock")
+                }
+                .tag(NavigationTab.rentals)
+            
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.circle")
+                }
+                .tag(NavigationTab.profile)
         }
-        .padding()
     }
 }
 
