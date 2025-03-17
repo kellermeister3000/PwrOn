@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct PowerStation: Identifiable {
     let id = UUID()
@@ -7,34 +8,86 @@ struct PowerStation: Identifiable {
     let pricePerDay: Double
     let imageURL: String
     let location: String
+    let coordinate: CLLocationCoordinate2D
 }
 
 struct ExploreView: View {
     @State private var searchText = ""
     @State private var showingAddListing = false
+    @State private var showingMapView = false
     
     // Sample data - will be replaced with Supabase data
     let sampleStations = [
-        PowerStation(name: "Jackery Explorer 1000", capacity: 1002, pricePerDay: 45.0, imageURL: "jackery1000", location: "San Francisco, CA"),
-        PowerStation(name: "EcoFlow Delta Pro", capacity: 3600, pricePerDay: 89.0, imageURL: "ecoflow-delta", location: "Oakland, CA"),
-        PowerStation(name: "Goal Zero Yeti 1500X", capacity: 1516, pricePerDay: 65.0, imageURL: "goalzero1500", location: "Berkeley, CA")
+        PowerStation(
+            name: "Jackery Explorer 1000",
+            capacity: 1002,
+            pricePerDay: 45.0,
+            imageURL: "jackery1000",
+            location: "San Francisco, CA",
+            coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
+        ),
+        PowerStation(
+            name: "EcoFlow Delta Pro",
+            capacity: 3600,
+            pricePerDay: 89.0,
+            imageURL: "ecoflow-delta",
+            location: "Oakland, CA",
+            coordinate: CLLocationCoordinate2D(latitude: 37.8044, longitude: -122.2711)
+        ),
+        PowerStation(
+            name: "Goal Zero Yeti 1500X",
+            capacity: 1516,
+            pricePerDay: 65.0,
+            imageURL: "goalzero1500",
+            location: "Berkeley, CA",
+            coordinate: CLLocationCoordinate2D(latitude: 37.8715, longitude: -122.2730)
+        )
     ]
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Search bar
-                searchBar
-                
-                // Power station list
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(sampleStations) { station in
-                            PowerStationCard(station: station)
-                                .padding(.horizontal)
+            ZStack {
+                VStack(spacing: 0) {
+                    // Search bar
+                    searchBar
+                    
+                    if showingMapView {
+                        // Map placeholder
+                        Color(.systemGray6)
+                            .overlay(
+                                Text("Map View")
+                                    .foregroundColor(.gray)
+                            )
+                    } else {
+                        // Power station list
+                        ScrollView {
+                            LazyVStack(spacing: 16) {
+                                ForEach(sampleStations) { station in
+                                    PowerStationCard(station: station)
+                                        .padding(.horizontal)
+                                }
+                            }
+                            .padding(.top)
                         }
                     }
-                    .padding(.top)
+                }
+                
+                // Floating Action Button
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: { showingMapView.toggle() }) {
+                            Image(systemName: showingMapView ? "list.bullet" : "map")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(Color.blue)
+                                .clipShape(Circle())
+                                .shadow(radius: 4)
+                        }
+                        .padding(24)
+                    }
                 }
             }
             .navigationTitle("Explore")
@@ -106,6 +159,8 @@ struct PowerStationCard: View {
     }
 }
 
-#Preview {
-    ExploreView()
+struct ExploreView_Previews: PreviewProvider {
+    static var previews: some View {
+        ExploreView()
+    }
 }
