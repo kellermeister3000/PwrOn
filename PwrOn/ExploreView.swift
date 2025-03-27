@@ -174,8 +174,7 @@ struct ExploreView: View {
                 }
             }
             .sheet(isPresented: $showingAddListing) {
-                Text("Add New Listing")
-                    .navigationTitle("New Listing")
+                AddPowerStationView()
             }
             .sheet(item: $selectedStation) { station in
                 NavigationStack {

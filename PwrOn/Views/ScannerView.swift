@@ -5,7 +5,6 @@ struct ScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showScanner = false
     @State private var scannedText: String = ""
-    @State private var hasPermission: Bool = false
     
     var onScanCompletion: (String) -> Void
     
@@ -13,17 +12,12 @@ struct ScannerView: View {
         NavigationView {
             VStack(spacing: 20) {
                 if DataScannerViewController.isSupported && DataScannerViewController.isAvailable {
-                    if hasPermission {
-                        LiveTextScannerView(scannedText: $scannedText) { text in
-                            onScanCompletion(text)
-                            dismiss()
-                        }
-                    } else {
-                        Text("Camera access is required")
-                            .foregroundColor(.red)
+                    LiveTextScannerView(scannedText: $scannedText) { text in
+                        onScanCompletion(text)
+                        dismiss()
                     }
                 } else {
-                    Text("This device doesn't support live text scanning")
+                    Text("This device doesn't support scanning")
                         .foregroundColor(.red)
                 }
             }
@@ -36,15 +30,6 @@ struct ScannerView: View {
                     }
                 }
             }
-            .onAppear {
-                requestCameraPermission()
-            }
-        }
-    }
-    
-    private func requestCameraPermission() {
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-            hasPermission = granted
         }
     }
 }
@@ -55,7 +40,23 @@ struct LiveTextScannerView: UIViewControllerRepresentable {
     
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let vc = DataScannerViewController(
-            recognizedDataTypes: [.text()],
+            recognizedDataTypes: [
+                .text(),
+                .barcode(symbologies: [
+                    .upce,
+                    .code39,
+                    .code39Checksum,
+                    .code39FullASCII,
+                    .code39FullASCIIChecksum,
+                    .code93,
+                    .code93i,
+                    .code128,
+                    .qr,
+                    .ean8,
+                    .ean13,
+                    .pdf417
+                ])
+            ],
             qualityLevel: .balanced,
             isHighlightingEnabled: true
         )
@@ -82,7 +83,12 @@ struct LiveTextScannerView: UIViewControllerRepresentable {
             case .text(let text):
                 parent.scannedText = text.transcript
                 parent.onScanCompletion(text.transcript)
-            default:
+            case .barcode(let barcode):
+                if let payload = barcode.payloadStringValue {
+                    parent.scannedText = payload
+                    parent.onScanCompletion(payload)
+                }
+            @unknown default:
                 break
             }
         }

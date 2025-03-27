@@ -9,7 +9,8 @@ struct AddPowerStationView: View {
     @State private var location = ""
     @State private var showingScanner = false
     @State private var serialNumber = ""
-    @State private var coordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194) // Default to SF
+    @State private var coordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
+    @State private var parsedProduct: EcoFlowProduct?
     
     var body: some View {
         NavigationStack {
@@ -36,9 +37,24 @@ struct AddPowerStationView: View {
                 Section("Serial Number") {
                     HStack {
                         TextField("Serial Number", text: $serialNumber)
+                            .onChange(of: serialNumber) { _, newValue in
+                                processSerialNumber(newValue)
+                            }
                         Button(action: { showingScanner = true }) {
                             Image(systemName: "camera")
                         }
+                    }
+                    
+                    if let product = parsedProduct, product.serialNumber == serialNumber {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Product: \(product.displayName)")
+                                .foregroundColor(.primary)
+                            Text("Manufactured: \(product.manufactureDateString)")
+                                .foregroundColor(.secondary)
+                            Text("Capacity: \(product.capacity) Wh")
+                                .foregroundColor(.secondary)
+                        }
+                        .font(.footnote)
                     }
                 }
             }
@@ -59,9 +75,18 @@ struct AddPowerStationView: View {
             }
             .sheet(isPresented: $showingScanner) {
                 ScannerView { scannedText in
-                    serialNumber = scannedText
+                    processSerialNumber(scannedText)
                 }
             }
+        }
+    }
+    
+    private func processSerialNumber(_ input: String) {
+        serialNumber = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        parsedProduct = EcoFlowParser.parse(serialNumber: serialNumber)
+        if let product = parsedProduct {
+            name = product.displayName
+            capacity = "\(product.capacity)"
         }
     }
 }

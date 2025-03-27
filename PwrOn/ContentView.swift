@@ -15,6 +15,7 @@ enum NavigationTab {
 
 struct ContentView: View {
     @State private var selectedTab: NavigationTab = .explore
+    @State private var showScanner = false
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -35,6 +36,12 @@ struct ContentView: View {
                     Label("Profile", systemImage: "person.circle")
                 }
                 .tag(NavigationTab.profile)
+        }
+        .sheet(isPresented: $showScanner) {
+            ScannerView { scannedText in
+                // Handle the scanned serial number
+                print("Scanned text: \(scannedText)")
+            }
         }
     }
 }
